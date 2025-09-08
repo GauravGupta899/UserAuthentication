@@ -1,0 +1,42 @@
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.aar
+target/
+*.iml
+*.ipr
+*.iws
+
+# IDE
+.idea/
+.eclipse/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Uploads
+uploads/
+
+# Logs
+*.log
+logs/
+
+# Maven
+.m2/
+.repository/
+.flattened-pom.xml
+
+# Spring Boot
+spring.log
