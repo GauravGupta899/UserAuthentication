@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - User Authentication</title>
+    <title>File Sharing Dashboard</title>
     <!-- Bootstrap CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -20,17 +20,21 @@
             padding: 2rem;
             margin-bottom: 2rem;
         }
-        .user-avatar {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
+        .file-item {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
             display: flex;
+            justify-content: between;
             align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: white;
-            font-weight: bold;
+        }
+        .file-name {
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .btn-sm {
+            margin-left: 0.5rem;
         }
     </style>
 </head>
@@ -38,9 +42,9 @@
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand" href="#">User Dashboard</a>
+            <a class="navbar-brand" href="#">File Sharing Dashboard</a>
             <div class="navbar-nav ms-auto">
-                <button class="btn btn-outline-light" id="logoutBtn">Logout</button>
+                <a href="login.html" class="btn btn-outline-light">Upload More Files</a>
             </div>
         </div>
     </nav>
@@ -53,7 +57,7 @@
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-2">Loading dashboard...</p>
+            <p class="mt-2">Loading files...</p>
         </div>
         
         <!-- Dashboard Content -->
@@ -61,51 +65,43 @@
             <div class="row">
                 <div class="col-md-8">
                     <div class="dashboard-card">
-                        <h2 class="text-primary mb-4">Welcome to Your Dashboard</h2>
-                        <p class="lead">You have successfully logged in with JWT authentication!</p>
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2 class="text-primary mb-0">Your Files</h2>
+                            <button class="btn btn-primary" onclick="refreshFiles()">
+                                <i class="fa fa-refresh"></i> Refresh
+                            </button>
+                        </div>
                         
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <div class="card bg-primary text-white">
-                                    <div class="card-body">
-                                        <h5 class="card-title">Authentication Status</h5>
-                                        <p class="card-text">✅ Authenticated with JWT Token</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card bg-success text-white">
-                                    <div class="card-body">
-                                        <h5 class="card-title">Session Status</h5>
-                                        <p class="card-text">✅ Active Session</p>
-                                    </div>
-                                </div>
-                            </div>
+                        <div id="filesList">
+                            <!-- Files will be loaded here -->
                         </div>
                     </div>
                 </div>
                 
                 <div class="col-md-4">
                     <div class="dashboard-card text-center">
-                        <div class="user-avatar mx-auto mb-3" id="userAvatar"></div>
-                        <h4 class="text-primary" id="userName"></h4>
-                        <p class="text-muted" id="userEmail"></p>
+                        <h4 class="text-primary mb-3">Quick Actions</h4>
+                        <div class="d-grid gap-2">
+                            <a href="login.html" class="btn btn-outline-primary">Upload New Files</a>
+                            <button class="btn btn-outline-danger" onclick="deleteAllFiles()">Clear All Files</button>
+                        </div>
                         <hr>
-                        <div class="text-start">
-                            <p><strong>User ID:</strong> <span id="userId"></span></p>
-                            <p><strong>Login Time:</strong> <span id="loginTime"></span></p>
+                        <p class="text-muted"><small>Files are stored temporarily and may be removed after server restart.</small></p>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h4 class="text-primary mb-3">Statistics</h4>
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h3 class="text-success" id="fileCount">0</h3>
+                                <small class="text-muted">Total Files</small>
+                            </div>
+                            <div class="col-6">
+                                <h3 class="text-info" id="totalSize">0 KB</h3>
+                                <small class="text-muted">Total Size</small>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            
-            <!-- Token Information -->
-            <div class="dashboard-card">
-                <h4 class="text-primary mb-3">JWT Token Information</h4>
-                <div class="alert alert-info">
-                    <p><strong>Token Status:</strong> Valid and Active</p>
-                    <p><strong>Token Type:</strong> Bearer Token</p>
-                    <p class="mb-0"><strong>Token Preview:</strong> <span id="tokenPreview" class="font-monospace small"></span></p>
                 </div>
             </div>
         </div>
@@ -115,7 +111,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        const API_BASE_URL = 'http://127.0.0.1:8000';
+        const API_BASE_URL = 'http://localhost:8000';
         
         function showAlert(message, type = 'danger') {
             const alertContainer = document.getElementById('alertContainer');
@@ -127,74 +123,200 @@
             `;
         }
         
-        function displayUserInfo(userData) {
-            document.getElementById('userName').textContent = userData.username;
-            document.getElementById('userEmail').textContent = userData.email;
-            document.getElementById('userId').textContent = userData.id;
-            document.getElementById('userAvatar').textContent = userData.username.charAt(0).toUpperCase();
-            document.getElementById('loginTime').textContent = new Date().toLocaleString();
-            
-            // Show token preview (first and last 10 characters)
-            const token = localStorage.getItem('authToken');
-            if (token) {
-                const preview = token.substring(0, 10) + '...' + token.substring(token.length - 10);
-                document.getElementById('tokenPreview').textContent = preview;
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function getFileIcon(fileName) {
+            const ext = fileName.split('.').pop().toLowerCase();
+            switch (ext) {
+                case 'jpg':
+                case 'jpeg':
+                case 'png':
+                case 'gif':
+                    return '🖼️';
+                case 'pdf':
+                    return '📄';
+                case 'txt':
+                case 'doc':
+                case 'docx':
+                    return '📝';
+                case 'zip':
+                case 'rar':
+                    return '📦';
+                case 'mp3':
+                case 'wav':
+                    return '🎵';
+                case 'mp4':
+                case 'avi':
+                    return '🎬';
+                default:
+                    return '📎';
             }
         }
         
-        async function loadDashboard() {
-            const token = localStorage.getItem('authToken');
+        async function loadFiles() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/files/list`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    displayFiles(data.files);
+                    document.getElementById('loadingSpinner').style.display = 'none';
+                    document.getElementById('dashboardContent').style.display = 'block';
+                } else {
+                    throw new Error(data.message || 'Failed to load files');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Failed to load files. Please refresh the page.');
+                document.getElementById('loadingSpinner').style.display = 'none';
+            }
+        }
+        
+        function displayFiles(files) {
+            const filesList = document.getElementById('filesList');
+            const fileCount = document.getElementById('fileCount');
             
-            if (!token) {
-                showAlert('No authentication token found. Please login again.');
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 2000);
+            fileCount.textContent = files.length;
+            
+            if (files.length === 0) {
+                filesList.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <h5>No files uploaded yet</h5>
+                        <p>Start by <a href="login.html">uploading some files</a></p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let filesHtml = '';
+            files.forEach(fileName => {
+                const icon = getFileIcon(fileName);
+                const originalName = fileName.includes('_') ? fileName.substring(fileName.indexOf('_') + 1) : fileName;
+                
+                filesHtml += `
+                    <div class="file-item">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <span class="me-2" style="font-size: 1.5rem;">${icon}</span>
+                            <div class="flex-grow-1">
+                                <div class="file-name">${originalName}</div>
+                                <small class="text-muted">${fileName}</small>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-primary" onclick="downloadFile('${fileName}')">
+                                Download
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteFile('${fileName}')">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            filesList.innerHTML = filesHtml;
+        }
+        
+        async function downloadFile(fileName) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/files/download/${fileName}`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName.includes('_') ? fileName.substring(fileName.indexOf('_') + 1) : fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showAlert(`File "${fileName}" downloaded successfully!`, 'success');
+                } else {
+                    throw new Error('Download failed');
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                showAlert(`Failed to download file: ${error.message}`);
+            }
+        }
+        
+        async function deleteFile(fileName) {
+            if (!confirm(`Are you sure you want to delete "${fileName}"?`)) {
                 return;
             }
             
             try {
-                const response = await fetch(`${API_BASE_URL}/user/dashboard/`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                const response = await fetch(`${API_BASE_URL}/api/files/delete/${fileName}`, {
+                    method: 'DELETE'
                 });
+                const data = await response.json();
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    displayUserInfo(data.user);
-                    
-                    // Hide loading spinner and show dashboard
-                    document.getElementById('loadingSpinner').style.display = 'none';
-                    document.getElementById('dashboardContent').style.display = 'block';
-                    
-                    showAlert('Dashboard loaded successfully!', 'success');
+                if (response.ok && data.success) {
+                    showAlert('File deleted successfully!', 'success');
+                    refreshFiles();
                 } else {
-                    throw new Error('Token verification failed');
+                    throw new Error(data.message || 'Delete failed');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showAlert('Authentication failed. Please login again.');
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('userData');
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 2000);
+                console.error('Delete error:', error);
+                showAlert(`Failed to delete file: ${error.message}`);
             }
         }
         
-        // Logout functionality
-        document.getElementById('logoutBtn').addEventListener('click', function() {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userData');
-            showAlert('Logged out successfully!', 'success');
-            setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 1000);
-        });
+        async function deleteAllFiles() {
+            if (!confirm('Are you sure you want to delete ALL files? This cannot be undone!')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/files/list`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const files = data.files;
+                    let deletedCount = 0;
+                    
+                    for (const fileName of files) {
+                        try {
+                            const deleteResponse = await fetch(`${API_BASE_URL}/api/files/delete/${fileName}`, {
+                                method: 'DELETE'
+                            });
+                            if (deleteResponse.ok) {
+                                deletedCount++;
+                            }
+                        } catch (error) {
+                            console.error(`Failed to delete ${fileName}:`, error);
+                        }
+                    }
+                    
+                    showAlert(`Successfully deleted ${deletedCount} file(s)!`, 'success');
+                    refreshFiles();
+                }
+            } catch (error) {
+                console.error('Error deleting all files:', error);
+                showAlert('Failed to delete all files.');
+            }
+        }
         
-        // Load dashboard when page loads
-        window.addEventListener('load', loadDashboard);
+        function refreshFiles() {
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('dashboardContent').style.display = 'none';
+            loadFiles();
+        }
+        
+        // Load files when page loads
+        window.addEventListener('load', loadFiles);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(refreshFiles, 30000);
     </script>
 </body>
 </html>
